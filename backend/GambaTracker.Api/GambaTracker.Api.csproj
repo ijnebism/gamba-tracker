@@ -11,4 +11,9 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\GambaTracker.Core\GambaTracker.Core.csproj" />
+    <ProjectReference Include="..\GambaTracker.Data\GambaTracker.Data.csproj" />
+  </ItemGroup>
+
 </Project>
