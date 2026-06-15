@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+
+**/node_modules/
+**/dist/
+
+.vscode/
+
+.env
+.env.*
+
+
+# Visual Studio
+.vs/
