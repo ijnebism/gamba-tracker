@@ -1,0 +1,5 @@
+CREATE TABLE events (
+    id UUID PRIMARY KEY,
+    timestamp TIMESTAMPTZ NOT NULL,
+    tracker_id UUID NOT NULL REFERENCES trackers(id) ON DELETE CASCADE
+);

@@ -1,0 +1,5 @@
+CREATE TABLE folders (
+    id UUID PRIMARY KEY,
+    name TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+);
