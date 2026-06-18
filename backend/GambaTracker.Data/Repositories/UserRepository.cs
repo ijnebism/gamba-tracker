@@ -26,6 +26,14 @@ namespace GambaTracker.Data.Repositories
             return users;
         }
 
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            using var conn = _configuration.CreateConnection();
+            return await conn.QuerySingleOrDefaultAsync<User>(
+                "SELECT * FROM Users WHERE email = @Email", new {Email = email}
+            );
+        }
+
         public async Task<User> GetUserByIdAsync(Guid id)
         {
             using var conn = _configuration.CreateConnection();

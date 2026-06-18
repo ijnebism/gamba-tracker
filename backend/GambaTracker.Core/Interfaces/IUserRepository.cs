@@ -6,5 +6,6 @@ namespace GambaTracker.Core.Interfaces
         Task<IEnumerable<User>> GetAllUsersAsync();
         Task<User> CreateUserAsync(User user);
         Task UpdateUserAsync(User user);
+        Task<User?> GetUserByEmailAsync(string email);
     }
 }
