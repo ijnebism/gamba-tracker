@@ -1,6 +1,6 @@
 CREATE TABLE drops (
-    id UUID PRIMARY KEY,
-    item_name TEXT NOT NULL,
-    quantity INT NOT NULL,
-    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE
+    Id UUID PRIMARY KEY,
+    ItemName TEXT NOT NULL,
+    Quantity INT NOT NULL,
+    EventId UUID NOT NULL REFERENCES events(Id) ON DELETE CASCADE
 );

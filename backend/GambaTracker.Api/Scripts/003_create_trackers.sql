@@ -1,5 +1,5 @@
 CREATE TABLE trackers (
-    id UUID PRIMARY KEY,
-    name TEXT NOT NULL,
-    folder_id UUID NOT NULL REFERENCES folders(id) ON DELETE CASCADE
+    Id UUID PRIMARY KEY,
+    Name TEXT NOT NULL,
+    FolderId UUID NOT NULL REFERENCES folders(Id) ON DELETE CASCADE
 )
