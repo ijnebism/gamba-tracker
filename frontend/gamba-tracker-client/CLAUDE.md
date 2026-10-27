@@ -32,7 +32,7 @@ Currently it is in the default React Native Expo code.
 
 ## Tech Stack
 
-- Expo SDK 56, React Native 0.85, React 19.2, TypeScript 6.
+- Expo SDK 58, React Native 0.88, React 19.3, TypeScript 6.
 - react-native-web for the web target.
 - Navigation: _TBD (likely Expo Router tabs)_.
 - State / data fetching: _TBD_.
