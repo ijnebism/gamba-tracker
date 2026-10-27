@@ -41,9 +41,9 @@ namespace GambaTracker.Api.Controllers
       var result = await _folderService.CreateAsync(User.GetUserId(), request);
       return result.Status switch
       {
-        FolderOperationStatus.NotFound => NotFound("Parent folder not found."),
-        FolderOperationStatus.NameTaken => Conflict("A folder with that name already exists here."),
-        _ => CreatedAtAction(nameof(GetFolder), new { id = result.Folder!.Id }, result.Folder)
+        OperationStatus.NotFound => NotFound("Parent folder not found."),
+        OperationStatus.NameTaken => Conflict("A folder with that name already exists here."),
+        _ => CreatedAtAction(nameof(GetFolder), new { id = result.Value!.Id }, result.Value)
       };
     }
 
@@ -53,9 +53,9 @@ namespace GambaTracker.Api.Controllers
       var result = await _folderService.RenameAsync(id, User.GetUserId(), request);
       return result.Status switch
       {
-        FolderOperationStatus.NotFound => NotFound(),
-        FolderOperationStatus.NameTaken => Conflict("A folder with that name already exists here."),
-        _ => Ok(result.Folder)
+        OperationStatus.NotFound => NotFound(),
+        OperationStatus.NameTaken => Conflict("A folder with that name already exists here."),
+        _ => Ok(result.Value)
       };
     }
 

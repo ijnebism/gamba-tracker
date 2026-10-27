@@ -4,10 +4,6 @@ using Npgsql;
 
 namespace GambaTracker.Api.Services;
 
-public enum FolderOperationStatus { Success, NotFound, NameTaken }
-
-public record FolderOperationResult(FolderOperationStatus Status, FolderResponse? Folder = null);
-
 public class FolderService
 {
     private readonly IFolderRepository _folderRepository;
@@ -43,11 +39,11 @@ public class FolderService
             trackers.OrderBy(t => t.Name).Select(t => new TrackerResponse(t.Id, t.Name, t.FolderId)));
     }
 
-    public async Task<FolderOperationResult> CreateAsync(Guid userId, CreateFolderRequest request)
+    public async Task<OperationResult<FolderResponse>> CreateAsync(Guid userId, CreateFolderRequest request)
     {
         if (request.ParentFolderId is Guid parentId && await _folderRepository.GetFolderByIdAsync(parentId, userId) == null)
         {
-            return new FolderOperationResult(FolderOperationStatus.NotFound);
+            return OperationResult<FolderResponse>.NotFound();
         }
 
         var folder = new Folder
@@ -63,18 +59,18 @@ public class FolderService
         }
         catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UniqueViolation)
         {
-            return new FolderOperationResult(FolderOperationStatus.NameTaken);
+            return OperationResult<FolderResponse>.NameTaken();
         }
 
-        return new FolderOperationResult(FolderOperationStatus.Success, ToResponse(folder));
+        return OperationResult<FolderResponse>.Success(ToResponse(folder));
     }
 
-    public async Task<FolderOperationResult> RenameAsync(Guid id, Guid userId, RenameFolderRequest request)
+    public async Task<OperationResult<FolderResponse>> RenameAsync(Guid id, Guid userId, RenameFolderRequest request)
     {
         var folder = await _folderRepository.GetFolderByIdAsync(id, userId);
         if (folder == null)
         {
-            return new FolderOperationResult(FolderOperationStatus.NotFound);
+            return OperationResult<FolderResponse>.NotFound();
         }
 
         folder.Name = request.Name.Trim();
@@ -85,10 +81,10 @@ public class FolderService
         }
         catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UniqueViolation)
         {
-            return new FolderOperationResult(FolderOperationStatus.NameTaken);
+            return OperationResult<FolderResponse>.NameTaken();
         }
 
-        return new FolderOperationResult(FolderOperationStatus.Success, ToResponse(folder));
+        return OperationResult<FolderResponse>.Success(ToResponse(folder));
     }
 
     // Deletes the folder and, through ON DELETE CASCADE, everything inside it

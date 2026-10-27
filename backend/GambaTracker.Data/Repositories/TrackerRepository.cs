@@ -17,10 +17,12 @@ namespace GambaTracker.Data.Repositories
             return Tracker;
         }
 
-        public async Task DeleteTrackerAsync(Guid id)
+        public async Task DeleteTrackerAsync(Guid id, Guid userId)
         {
             using var conn = _configuration.CreateConnection();
-            await conn.ExecuteAsync("DELETE FROM Trackers WHERE Id = @Id", new { Id = id });
+            await conn.ExecuteAsync(
+                "DELETE FROM Trackers t USING Folders f WHERE t.Id = @Id AND t.FolderId = f.Id AND f.UserId = @UserId",
+                new { Id = id, UserId = userId });
         }
 
         public async Task<IEnumerable<Tracker>> GetAllTrackersByIdAsync(Guid folderId)
@@ -30,10 +32,12 @@ namespace GambaTracker.Data.Repositories
             return Trackers;
         }
 
-        public async Task<Tracker?> GetTrackerByIdAsync(Guid id)
+        public async Task<Tracker?> GetTrackerByIdAsync(Guid id, Guid userId)
         {
             using var conn = _configuration.CreateConnection();
-            var Tracker = await conn.QuerySingleOrDefaultAsync<Tracker>("SELECT * FROM Trackers WHERE Id = @Id", new { Id = id });
+            var Tracker = await conn.QuerySingleOrDefaultAsync<Tracker>(
+                "SELECT t.* FROM Trackers t JOIN Folders f ON f.Id = t.FolderId WHERE t.Id = @Id AND f.UserId = @UserId",
+                new { Id = id, UserId = userId });
             return Tracker;
         }
 
