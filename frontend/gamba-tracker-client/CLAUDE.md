@@ -11,7 +11,7 @@ The Gamba Tracker client for web, iOS and Android. See the root `CLAUDE.md` for 
 A bottom tab bar with three tabs:
 
 - **Recent**
-  - The most recently opened trackers.
+  - The most recently opened trackers. Tracked on the device (no backend endpoint).
   - A dynamic search.
 - **Browse**
   - The user's folder tree, starting from root.
@@ -23,7 +23,8 @@ A bottom tab bar with three tabs:
 ### Other screens
 
 - **Login**: email + password, or Google.
-- **Tracker detail**: the tracker's events and metrics, e.g. item rates per minute.
+- **Tracker detail**: the tracker's events and metrics, e.g. item rates per minute. Metrics are computed in the app from `GET /api/tracker/{id}/events`; the backend has no metrics endpoint.
+- **API keys** (likely under Profile): create, list and revoke keys for mods and scripts that post to `/api/ingest`. A new key is only shown once, so display it with a copy button.
 
 ### Current features
 

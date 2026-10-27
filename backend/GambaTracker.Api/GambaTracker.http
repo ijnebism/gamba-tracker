@@ -19,4 +19,35 @@ Content-Type: application/json
   "password": "Test1234!"
 }
 
+### Paste the values you get back here
+@Token = paste-token-from-login
+@ApiKey = paste-key-from-create-api-key
+
+### Create an API key (the full key is only returned once)
+POST {{GambaTracker_HostAddress}}/api/apikey
+Content-Type: application/json
+Authorization: Bearer {{Token}}
+
+{
+  "name": "Skyblock mod"
+}
+
+### Ingest an event with an API key (creates any missing folders and the tracker)
+POST {{GambaTracker_HostAddress}}/api/ingest
+Content-Type: application/json
+X-Api-Key: {{ApiKey}}
+
+{
+  "path": "Skyblock/Dungeons/F7",
+  "tracker": "Chest drops",
+  "drops": [
+    { "itemName": "Necron's Handle", "quantity": 1 },
+    { "itemName": "Wither Essence", "quantity": 12 }
+  ]
+}
+
+### Browse from the root
+GET {{GambaTracker_HostAddress}}/api/folder/root
+Authorization: Bearer {{Token}}
+
 ###

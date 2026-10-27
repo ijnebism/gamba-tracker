@@ -6,20 +6,22 @@ The REST API, auth and persistence for Gamba Tracker. See the root `CLAUDE.md` f
 
 Responsibilities:
 
-- **Auth**: email + password (done), Google login (planned). Issues JWTs.
+- **Auth**: email + password (done), Google login (planned). Issues JWTs. Per-user API keys for external sources.
 - **CRUD**: folders (nested), trackers and events with their drops, all scoped to the logged-in user.
 - **Ingest**: an endpoint that external sources (APIs, mods) post events to. It auto-creates any missing folder/tracker in the given path.
-- **Metrics**: queries such as item rate per minute for a tracker.
+
+Metrics (item rates) and the Recent tab are computed on the frontend from the event list and locally stored history, not by the backend.
 
 ### Solution layout
 
 - `GambaTracker.Api` — web host
-  - `Program.cs` — DI registration, JWT setup, DbUp migrations on startup
+  - `Program.cs` — DI registration, JWT and API key auth setup, DbUp migrations on startup
+  - `Authentication/` — API key auth handler and key hashing
   - `Controllers/` — API controllers
   - `Services/` — business logic and app services (e.g. `TokenService`)
   - `Scripts/` — DbUp SQL migrations (embedded resources, run in filename order)
 - `GambaTracker.Core` — domain, no infrastructure dependencies
-  - `Models/` — DB entities (User, Folder, Tracker, Event, Drop)
+  - `Models/` — DB entities (User, Folder, Tracker, Event, Drop, ApiKey)
   - `DTOs/` — request/response shapes
   - `Interfaces/` — repository contracts
 - `GambaTracker.Data` — data access
@@ -44,10 +46,34 @@ Dependency direction: Api → Data → Core. Core references nothing.
 - `POST /api/auth/register` creates a user with a BCrypt-hashed password and returns `AuthResponse(Token, Email, Name)`. It rejects duplicate emails.
 - `POST /api/auth/login` checks the email and password and returns the same `AuthResponse`.
 - JWTs carry the user id (`ClaimTypes.NameIdentifier`), email and name. They expire after `Jwt:ExpiryHours`.
-- `User.GetUserId()` (`Api/Extensions/ClaimsPrincipalExtensions.cs`) reads the caller's id in `[Authorize]` endpoints.
-- Swagger has an "Authorize" button for pasting a JWT.
+- `User.GetUserId()` (`Api/Extensions/ClaimsPrincipalExtensions.cs`) reads the caller's id in `[Authorize]` endpoints. It works for both JWT and API key requests.
+- Swagger's "Authorize" button accepts a JWT and an API key.
 
-**Repositories** (`GambaTracker.Data/Repositories`): async CRUD for all five models, all registered in DI.
+**API keys** (`008_create_api_keys.sql`, `Authentication/`, `ApiKeyController` → `Services/ApiKeyService.cs`)
+
+- Keys look like `gt_<43 random chars>`. Only a SHA-256 hash and an 11-character display prefix are stored. The full key is returned once, at creation.
+- `ApiKeyAuthenticationHandler` (scheme `ApiKey`) reads the `X-Api-Key` header, resolves the key's user and updates `LastUsedAt`.
+- JWT stays the default scheme. Plain `[Authorize]` endpoints don't accept API keys; only endpoints that name the `ApiKey` scheme do (currently just ingest).
+- Key management is JWT-only, so a leaked key can't create or revoke keys.
+
+| Method | Route               | Action                                                    |
+| ------ | ------------------- | --------------------------------------------------------- |
+| GET    | `/api/apikey`       | List the caller's keys (prefix, created, last used; never the key) |
+| POST   | `/api/apikey`       | Create (`name`). 201 with the full `key`, shown only this once |
+| DELETE | `/api/apikey/{id}`  | Revoke. 204, 404 if not the caller's                      |
+
+**Ingest** (`IngestController` → `Services/IngestService.cs` → `Data/Repositories/IngestRepository.cs`, DTOs in `Core/DTOs/IngestDto.cs`)
+
+`POST /api/ingest` accepts an `X-Api-Key` header or a JWT, and returns 201 with `{ folderId, trackerId, event }`.
+
+Body: `{ "path": "Skyblock/Dungeons/F7", "tracker": "Chest drops", "timestamp": "...", "drops": [{ "itemName": "Wheat", "quantity": 1 }] }`.
+
+- `path` is the folder path from the user's root, split on `/`. Segments are trimmed and empty ones ignored. It needs 1–20 segments of at most 100 characters each, otherwise 400.
+- `timestamp` is optional and defaults to the time the request arrives. Drops follow the same rules as event create.
+- One transaction finds or creates each folder, then the tracker, then inserts the event and drops. It uses `INSERT ... ON CONFLICT DO NOTHING` plus a `SELECT` against the unique name indexes, so repeated or concurrent requests for the same path reuse the same folders and tracker.
+- `Data/EventWriter.cs` is the shared event + drops insert used by both `EventRepository` and `IngestRepository`.
+
+**Repositories** (`GambaTracker.Data/Repositories`): async CRUD for all models, plus `IngestRepository`, all registered in DI.
 
 - User: get by id/email, list all, create, update.
 - Folder: every method takes or checks the user id. `GetChildFoldersAsync(userId, parentFolderId)` lists one level, where a null parent means root.
@@ -57,6 +83,7 @@ Dependency direction: Api → Data → Core. Core references nothing.
   - `CreateEventAsync` inserts the event and all its `Drops` in one transaction.
   - `GetEventsWithDropsAsync(trackerId, from, to)` loads events newest first with their drops, using two queries.
 - Drop: get by id, list by event, create, update, delete. Not scoped to the user; only reached through an event that's already been checked.
+- ApiKey: get by id, list and delete are scoped to the user. Get by hash is only for the auth handler.
 - `Get*ByIdAsync` returns `null` when the row doesn't exist.
 
 **Services** return `OperationResult<T>` (`Services/OperationResult.cs`) for writes: `Success`, `NotFound` or `NameTaken`. Controllers map these to 2xx, 404 or 409. A unique-index violation (`PostgresErrorCodes.UniqueViolation`) is what produces `NameTaken`.
@@ -101,20 +128,21 @@ Create body: `{ "timestamp": "2026-10-28T10:00:00Z", "drops": [{ "itemName": "Wh
 
 ### In progress
 
-Following the roadmap in order: 6 metrics → 7 ingest + API keys → 8 recent trackers → 9 Google login.
+Next on the roadmap: Google login.
 
 - The event list has no paging, only the `from`/`to` range. Add paging if trackers get large.
 - There's no endpoint to edit an event or its drops.
 - There's no endpoint to move a tracker to another folder.
 - There's no endpoint to move a folder to a new parent. If one is added, it must reject moving a folder into itself or one of its descendants.
 - Google login is not implemented.
+- Ingest has no rate limiting.
 
 ## Tech Stack
 
 - .NET 10, ASP.NET Core (controllers)
 - PostgreSQL via Dapper + Npgsql
 - DbUp for migrations
-- JWT bearer auth, BCrypt for password hashing
+- JWT bearer auth, BCrypt for password hashing, custom `X-Api-Key` scheme for external sources
 - Swashbuckle (Swagger) in Development
 
 ## Implementation conventions

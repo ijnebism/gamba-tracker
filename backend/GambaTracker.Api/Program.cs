@@ -1,5 +1,7 @@
 using DbUp;
+using GambaTracker.Api.Authentication;
 using GambaTracker.Api.Services;
+using Microsoft.AspNetCore.Authentication;
 using GambaTracker.Core.Interfaces;
 using GambaTracker.Data;
 using GambaTracker.Data.Repositories;
@@ -29,6 +31,19 @@ builder.Services.AddSwaggerGen(options =>
     {
         [new OpenApiSecuritySchemeReference("Bearer", document)] = []
     });
+
+    // Lets /api/ingest be tried with an API key from Swagger UI
+    options.AddSecurityDefinition(ApiKeyAuthenticationHandler.SchemeName, new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.ApiKey,
+        Name = ApiKeyAuthenticationHandler.HeaderName,
+        In = ParameterLocation.Header,
+        Description = "Paste a key from POST /api/apikey"
+    });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference(ApiKeyAuthenticationHandler.SchemeName, document)] = []
+    });
 });
 
 // Authentication & Authorization
@@ -46,7 +61,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
     };
-});
+})
+    // X-Api-Key header, for external sources. Only endpoints that name this scheme accept it (see IngestController)
+    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null);
 
 builder.Services.AddAuthorization();
 
@@ -57,11 +74,15 @@ builder.Services.AddScoped<IFolderRepository, FolderRepository>();
 builder.Services.AddScoped<ITrackerRepository, TrackerRepository>();
 builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<IDropRepository, DropRepository>();
+builder.Services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
+builder.Services.AddScoped<IIngestRepository, IngestRepository>();
 
 // Services
 builder.Services.AddScoped<FolderService>();
 builder.Services.AddScoped<TrackerService>();
 builder.Services.AddScoped<EventService>();
+builder.Services.AddScoped<ApiKeyService>();
+builder.Services.AddScoped<IngestService>();
 
 builder.Services.AddControllers();
 

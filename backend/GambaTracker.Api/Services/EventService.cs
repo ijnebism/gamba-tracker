@@ -73,6 +73,7 @@ public class EventService
         return true;
     }
 
-    private static EventResponse ToResponse(Event eventItem) =>
+    // Also used by IngestService, so both return events in the same shape
+    public static EventResponse ToResponse(Event eventItem) =>
         new(eventItem.Id, eventItem.Timestamp, eventItem.Drops.OrderBy(d => d.ItemName).Select(d => new DropDto(d.ItemName, d.Quantity)));
 }

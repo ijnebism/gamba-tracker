@@ -16,14 +16,7 @@ namespace GambaTracker.Data.Repositories
             conn.Open();
             using var transaction = conn.BeginTransaction();
 
-            await conn.ExecuteAsync("INSERT INTO Events (Id, Timestamp, TrackerId) VALUES (@Id, @Timestamp, @TrackerId)", Event, transaction);
-
-            foreach (var drop in Event.Drops)
-            {
-                drop.EventId = Event.Id;
-            }
-            // Dapper runs the insert once per drop
-            await conn.ExecuteAsync("INSERT INTO Drops (Id, ItemName, Quantity, EventId) VALUES (@Id, @ItemName, @Quantity, @EventId)", Event.Drops, transaction);
+            await EventWriter.InsertWithDropsAsync(conn, transaction, Event);
 
             transaction.Commit();
             return Event;
