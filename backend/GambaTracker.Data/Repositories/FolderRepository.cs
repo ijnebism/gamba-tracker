@@ -30,10 +30,10 @@ namespace GambaTracker.Data.Repositories
             return folders;
         }
 
-        public async Task<Folder> GetFolderByIdAsync(Guid id)
+        public async Task<Folder?> GetFolderByIdAsync(Guid id)
         {
             using var conn = _configuration.CreateConnection();
-            var folder = await conn.QuerySingleAsync<Folder>("SELECT * FROM Folders WHERE Id = @Id", new { Id = id });
+            var folder = await conn.QuerySingleOrDefaultAsync<Folder>("SELECT * FROM Folders WHERE Id = @Id", new { Id = id });
             return folder;
         }
 

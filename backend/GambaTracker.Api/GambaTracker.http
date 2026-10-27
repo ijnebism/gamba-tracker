@@ -1,6 +1,22 @@
 @GambaTracker_HostAddress = http://localhost:5180
 
-GET {{GambaTracker_HostAddress}}/weatherforecast/
-Accept: application/json
+### Register a test user
+POST {{GambaTracker_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Test1234!",
+  "name": "Test User"
+}
+
+### Log in (copy the token from the response for authorized requests)
+POST {{GambaTracker_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Test1234!"
+}
 
 ###

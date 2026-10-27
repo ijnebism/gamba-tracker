@@ -5,6 +5,8 @@ using GambaTracker.Core.DTOs;
 
 namespace GambaTracker.Api.Controllers
 {
+  [Route("api/[controller]")]
+  [ApiController]
   public class AuthController : ControllerBase
   {
       private readonly IUserRepository _userRepository;

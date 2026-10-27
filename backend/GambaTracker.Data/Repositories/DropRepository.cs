@@ -13,7 +13,7 @@ namespace GambaTracker.Data.Repositories
         public async Task<Drop> CreateDropAsync(Drop drop)
         {
             using var conn = _configuration.CreateConnection();
-            await conn.ExecuteAsync("INSERT INTO Drops (Id, Name, EventId) VALUES (@Id, @Name, @EventId)", drop);
+            await conn.ExecuteAsync("INSERT INTO Drops (Id, ItemName, Quantity, EventId) VALUES (@Id, @ItemName, @Quantity, @EventId)", drop);
             return drop;
         }
 
@@ -30,17 +30,17 @@ namespace GambaTracker.Data.Repositories
             return drops;
         }
 
-        public async Task<Drop> GetDropByIdAsync(Guid id)
+        public async Task<Drop?> GetDropByIdAsync(Guid id)
         {
             using var conn = _configuration.CreateConnection();
-            var drop = await conn.QuerySingleAsync<Drop>("SELECT * FROM Drops WHERE Id = @Id", new { Id = id });
+            var drop = await conn.QuerySingleOrDefaultAsync<Drop>("SELECT * FROM Drops WHERE Id = @Id", new { Id = id });
             return drop;
         }
 
         public async Task UpdateDropAsync(Drop drop)
         {
             using var conn = _configuration.CreateConnection();
-            await conn.ExecuteAsync("UPDATE Drops SET Name = @Name, EventId = @EventId WHERE Id = @Id", drop);
+            await conn.ExecuteAsync("UPDATE Drops SET ItemName = @ItemName, Quantity = @Quantity, EventId = @EventId WHERE Id = @Id", drop);
         }
         
     }

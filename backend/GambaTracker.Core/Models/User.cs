@@ -4,7 +4,7 @@ public class User
     public string Name { get; set; } = null!;
     public string Email { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
-    public string GoogleId { get; set; } = null!;
+    public string? GoogleId { get; set; }
 
     public List<Folder> Folders { get; set; } = new();
     

@@ -34,10 +34,10 @@ namespace GambaTracker.Data.Repositories
             );
         }
 
-        public async Task<User> GetUserByIdAsync(Guid id)
+        public async Task<User?> GetUserByIdAsync(Guid id)
         {
             using var conn = _configuration.CreateConnection();
-            var user = await conn.QuerySingleAsync<User>("SELECT * FROM Users WHERE Id = @Id", new { Id = id });
+            var user = await conn.QuerySingleOrDefaultAsync<User>("SELECT * FROM Users WHERE Id = @Id", new { Id = id });
             return user;
         }
 

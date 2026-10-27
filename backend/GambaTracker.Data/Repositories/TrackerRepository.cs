@@ -30,10 +30,10 @@ namespace GambaTracker.Data.Repositories
             return Trackers;
         }
 
-        public async Task<Tracker> GetTrackerByIdAsync(Guid id)
+        public async Task<Tracker?> GetTrackerByIdAsync(Guid id)
         {
             using var conn = _configuration.CreateConnection();
-            var Tracker = await conn.QuerySingleAsync<Tracker>("SELECT * FROM Trackers WHERE Id = @Id", new { Id = id });
+            var Tracker = await conn.QuerySingleOrDefaultAsync<Tracker>("SELECT * FROM Trackers WHERE Id = @Id", new { Id = id });
             return Tracker;
         }
 

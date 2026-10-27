@@ -34,40 +34,27 @@ Dependency direction: Api → Data → Core. Core references nothing.
 
 **Auth** (`AuthController`, `TokenService`)
 
-- `POST /register` creates a user with a BCrypt-hashed password and returns `AuthResponse(Token, Email, Name)`. It rejects duplicate emails.
-- `POST /login` checks the email and password and returns the same `AuthResponse`.
+- `POST /api/auth/register` creates a user with a BCrypt-hashed password and returns `AuthResponse(Token, Email, Name)`. It rejects duplicate emails.
+- `POST /api/auth/login` checks the email and password and returns the same `AuthResponse`.
 - JWTs carry the user id (`ClaimTypes.NameIdentifier`), email and name. They expire after `Jwt:ExpiryHours`.
+- `User.GetUserId()` (`Api/Extensions/ClaimsPrincipalExtensions.cs`) reads the caller's id in `[Authorize]` endpoints.
+- Swagger has an "Authorize" button for pasting a JWT.
 
-**Repositories** (`GambaTracker.Data/Repositories`): full async CRUD for all five models.
+**Repositories** (`GambaTracker.Data/Repositories`): async CRUD for all five models, all registered in DI.
 
 - User: get by id/email, list all, create, update.
 - Folder, Tracker, Event, Drop: get by id, list by parent, create, update, delete.
+- `Get*ByIdAsync` returns `null` when the row doesn't exist.
 
-**Endpoints**: all require `[Authorize]`. The controllers are written, but their repositories aren't registered in DI yet (see In progress).
-
-| Method | Route                                 | Action                    |
-| ------ | ------------------------------------- | ------------------------- |
-| GET    | `/api/folder`                         | List the caller's folders |
-| GET    | `/api/folder/{id}`                    | Get a folder              |
-| POST   | `/api/folder`                         | Create a folder (`Name`)  |
-| GET    | `/api/folder/{folderId}/tracker`      | List a folder's trackers  |
-| GET    | `/api/folder/{folderId}/tracker/{id}` | Get a tracker             |
-| POST   | `/api/folder/{folderId}/tracker`      | Create a tracker (`Name`) |
-| GET    | `/api/tracker/{trackerId}/event`      | List a tracker's events   |
-| GET    | `/api/tracker/{trackerId}/event/{id}` | Get an event              |
-| POST   | `/api/tracker/{trackerId}/event`      | Create an event (`Date`)  |
-
-`UserController` exists but has no endpoints yet. There are no drop endpoints yet.
+**Endpoints**: auth only. `UserController` exists but has no endpoints yet.
 
 ### In progress
 
+Following the roadmap in order: 2 nested folders → 3 folder endpoints → 4 tracker endpoints → 5 events with drops → 6 metrics → 7 ingest + API keys → 8 recent trackers → 9 Google login.
+
 - Nested folders: `Folder` and `002_create_folders.sql` have no `ParentFolderId` yet. This needs a new migration.
-- `AuthController` lacks `[Route("api/[controller]")]` / `[ApiController]`, so its routes resolve to `/login` and `/register` instead of `/api/auth/...`.
-- Google login is not implemented. `User.GoogleId` is non-nullable in C# but nullable in the database.
-- Only `IUserRepository` is registered in DI so far. The Folder, Tracker and Event controllers fail to resolve until their repositories are registered in `Program.cs`.
-- `FolderController.GetFolder` takes `id` as a `string` and looks up the folder with the caller's `userId` instead of `id`.
-- The Tracker and Event endpoints don't check that the parent folder or tracker belongs to the caller.
-- Events are created without drops. There's no drop endpoint, and nothing creates a drop together with its event.
+- Repository queries aren't scoped to the user yet. Ownership checks come with each step's endpoints.
+- Google login is not implemented.
 
 ## Tech Stack
 

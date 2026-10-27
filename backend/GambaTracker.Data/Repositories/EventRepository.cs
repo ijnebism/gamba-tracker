@@ -13,7 +13,7 @@ namespace GambaTracker.Data.Repositories
         public async Task<Event> CreateEventAsync(Event Event)
         {
             using var conn = _configuration.CreateConnection();
-            await conn.ExecuteAsync("INSERT INTO Events (Id, Name, Date, TrackerId) VALUES (@Id, @Name, @Date, @TrackerId)", Event);
+            await conn.ExecuteAsync("INSERT INTO Events (Id, Timestamp, TrackerId) VALUES (@Id, @Timestamp, @TrackerId)", Event);
             return Event;
         }
 
@@ -30,17 +30,17 @@ namespace GambaTracker.Data.Repositories
             return Events;
         }
 
-        public async Task<Event> GetEventByIdAsync(Guid id)
+        public async Task<Event?> GetEventByIdAsync(Guid id)
         {
             using var conn = _configuration.CreateConnection();
-            var Event = await conn.QuerySingleAsync<Event>("SELECT * FROM Events WHERE Id = @Id", new {Id = id});
+            var Event = await conn.QuerySingleOrDefaultAsync<Event>("SELECT * FROM Events WHERE Id = @Id", new {Id = id});
             return Event;
         }
 
         public async Task UpdateEventAsync(Event Event)
         {
             using var conn = _configuration.CreateConnection();
-            await conn.ExecuteAsync("UPDATE Events SET Name = @Name, Date = @Date WHERE Id = @Id", Event);
+            await conn.ExecuteAsync("UPDATE Events SET Timestamp = @Timestamp WHERE Id = @Id", Event);
         }
     }
 }
