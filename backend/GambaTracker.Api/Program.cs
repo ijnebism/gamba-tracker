@@ -61,6 +61,7 @@ builder.Services.AddScoped<IDropRepository, DropRepository>();
 // Services
 builder.Services.AddScoped<FolderService>();
 builder.Services.AddScoped<TrackerService>();
+builder.Services.AddScoped<EventService>();
 
 builder.Services.AddControllers();
 

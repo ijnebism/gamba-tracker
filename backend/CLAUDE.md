@@ -52,7 +52,11 @@ Dependency direction: Api → Data → Core. Core references nothing.
 - User: get by id/email, list all, create, update.
 - Folder: every method takes or checks the user id. `GetChildFoldersAsync(userId, parentFolderId)` lists one level, where a null parent means root.
 - Tracker: get by id and delete check the user through the tracker's folder. List-by-folder and update expect the caller to have checked ownership first.
-- Event, Drop: get by id, list by parent, create, update, delete. Not yet scoped to the user.
+- Event:
+  - Get by id and delete check the user through tracker → folder.
+  - `CreateEventAsync` inserts the event and all its `Drops` in one transaction.
+  - `GetEventsWithDropsAsync(trackerId, from, to)` loads events newest first with their drops, using two queries.
+- Drop: get by id, list by event, create, update, delete. Not scoped to the user; only reached through an event that's already been checked.
 - `Get*ByIdAsync` returns `null` when the row doesn't exist.
 
 **Services** return `OperationResult<T>` (`Services/OperationResult.cs`) for writes: `Success`, `NotFound` or `NameTaken`. Controllers map these to 2xx, 404 or 409. A unique-index violation (`PostgresErrorCodes.UniqueViolation`) is what produces `NameTaken`.
@@ -78,13 +82,29 @@ Dependency direction: Api → Data → Core. Core references nothing.
 
 Folder and tracker names are trimmed and limited to 100 characters. Blank names return 400.
 
+**Event endpoints** (`EventController` → `Services/EventService.cs`, DTOs in `Core/DTOs/EventDto.cs`). All require `[Authorize]`, and an event or tracker of another user returns 404.
+
+| Method | Route                                         | Action                                                              |
+| ------ | --------------------------------------------- | ------------------------------------------------------------------- |
+| GET    | `/api/tracker/{trackerId}/events?from=&to=`   | The tracker's events, newest first, each with its drops. `from`/`to` are optional and inclusive |
+| POST   | `/api/tracker/{trackerId}/events`             | Create an event with its drops. 201, 404 unknown tracker            |
+| GET    | `/api/event/{id}`                             | One event with its drops                                            |
+| DELETE | `/api/event/{id}`                             | Delete the event and its drops. 204                                 |
+
+Create body: `{ "timestamp": "2026-10-28T10:00:00Z", "drops": [{ "itemName": "Wheat", "quantity": 1 }] }`.
+
+- `timestamp` is a `DateTimeOffset` and is stored as UTC. Responses return UTC (`...Z`).
+- At least one drop is required. `quantity` must be 1 or more, and `itemName` is required and limited to 100 characters (trimmed). Breaking a rule returns 400.
+- Drops in a response are sorted by item name.
+
 `UserController` exists but has no endpoints yet.
 
 ### In progress
 
-Following the roadmap in order: 5 events with drops → 6 metrics → 7 ingest + API keys → 8 recent trackers → 9 Google login.
+Following the roadmap in order: 6 metrics → 7 ingest + API keys → 8 recent trackers → 9 Google login.
 
-- Event and Drop repository queries aren't scoped to the user yet. Ownership checks come with Step 5's endpoints.
+- The event list has no paging, only the `from`/`to` range. Add paging if trackers get large.
+- There's no endpoint to edit an event or its drops.
 - There's no endpoint to move a tracker to another folder.
 - There's no endpoint to move a folder to a new parent. If one is added, it must reject moving a folder into itself or one of its descendants.
 - Google login is not implemented.
