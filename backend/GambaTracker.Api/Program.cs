@@ -58,6 +58,9 @@ builder.Services.AddScoped<ITrackerRepository, TrackerRepository>();
 builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<IDropRepository, DropRepository>();
 
+// Services
+builder.Services.AddScoped<FolderService>();
+
 builder.Services.AddControllers();
 
 //  DbUp

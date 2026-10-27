@@ -13,14 +13,14 @@ namespace GambaTracker.Data.Repositories
         public async Task<Folder> CreateFolderAsync(Folder folder)
         {
             using var conn = _configuration.CreateConnection();
-            await conn.ExecuteAsync("INSERT INTO Folders (Id, Name, UserId) VALUES (@Id, @Name, @UserId)", folder);
+            await conn.ExecuteAsync("INSERT INTO Folders (Id, Name, UserId, ParentFolderId) VALUES (@Id, @Name, @UserId, @ParentFolderId)", folder);
             return folder;
         }
 
-        public async Task DeleteFolderAsync(Guid id)
+        public async Task DeleteFolderAsync(Guid id, Guid userId)
         {
             using var conn = _configuration.CreateConnection();
-            await conn.ExecuteAsync("DELETE FROM Folders WHERE Id = @Id", new { Id = id });
+            await conn.ExecuteAsync("DELETE FROM Folders WHERE Id = @Id AND UserId = @UserId", new { Id = id, UserId = userId });
         }
 
         public async Task<IEnumerable<Folder>> GetAllFolderByIdAsync(Guid userId)
@@ -30,17 +30,27 @@ namespace GambaTracker.Data.Repositories
             return folders;
         }
 
-        public async Task<Folder?> GetFolderByIdAsync(Guid id)
+        public async Task<IEnumerable<Folder>> GetChildFoldersAsync(Guid userId, Guid? parentFolderId)
         {
             using var conn = _configuration.CreateConnection();
-            var folder = await conn.QuerySingleOrDefaultAsync<Folder>("SELECT * FROM Folders WHERE Id = @Id", new { Id = id });
+            // IS NOT DISTINCT FROM treats NULL = NULL as true, so a null parent matches root folders
+            var folders = await conn.QueryAsync<Folder>(
+                "SELECT * FROM Folders WHERE UserId = @UserId AND ParentFolderId IS NOT DISTINCT FROM @ParentFolderId ORDER BY Name",
+                new { UserId = userId, ParentFolderId = parentFolderId });
+            return folders;
+        }
+
+        public async Task<Folder?> GetFolderByIdAsync(Guid id, Guid userId)
+        {
+            using var conn = _configuration.CreateConnection();
+            var folder = await conn.QuerySingleOrDefaultAsync<Folder>("SELECT * FROM Folders WHERE Id = @Id AND UserId = @UserId", new { Id = id, UserId = userId });
             return folder;
         }
 
         public async Task UpdateFolderAsync(Folder folder)
         {
             using var conn = _configuration.CreateConnection();
-            await conn.ExecuteAsync("UPDATE Folders SET Name = @Name WHERE Id = @Id", folder);
+            await conn.ExecuteAsync("UPDATE Folders SET Name = @Name, ParentFolderId = @ParentFolderId WHERE Id = @Id AND UserId = @UserId", folder);
         }
     }
 }

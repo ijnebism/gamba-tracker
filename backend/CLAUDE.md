@@ -32,6 +32,12 @@ Dependency direction: Api → Data → Core. Core references nothing.
 
 **Database**: DbUp migrations `001`–`005` create the `users`, `folders`, `trackers`, `events` and `drops` tables. Child rows `ON DELETE CASCADE` from their parent.
 
+**Nested folders** (`006_add_folder_parent.sql`)
+
+- `folders.ParentFolderId` is nullable. Null means the folder is at the user's root.
+- Deleting a folder cascades to its subfolders, trackers, events and drops.
+- Folder names are unique within their parent (and within the user's root), so a path like `Skyblock/Dungeons` resolves to exactly one folder.
+
 **Auth** (`AuthController`, `TokenService`)
 
 - `POST /api/auth/register` creates a user with a BCrypt-hashed password and returns `AuthResponse(Token, Email, Name)`. It rejects duplicate emails.
@@ -43,17 +49,30 @@ Dependency direction: Api → Data → Core. Core references nothing.
 **Repositories** (`GambaTracker.Data/Repositories`): async CRUD for all five models, all registered in DI.
 
 - User: get by id/email, list all, create, update.
-- Folder, Tracker, Event, Drop: get by id, list by parent, create, update, delete.
+- Folder: every method takes or checks the user id. `GetChildFoldersAsync(userId, parentFolderId)` lists one level, where a null parent means root.
+- Tracker, Event, Drop: get by id, list by parent, create, update, delete. Not yet scoped to the user.
 - `Get*ByIdAsync` returns `null` when the row doesn't exist.
 
-**Endpoints**: auth only. `UserController` exists but has no endpoints yet.
+**Folder endpoints** (`FolderController` → `Services/FolderService.cs`, DTOs in `Core/DTOs/FolderDto.cs`). All require `[Authorize]`, and another user's folder returns 404.
+
+| Method | Route               | Action                                                                      |
+| ------ | ------------------- | --------------------------------------------------------------------------- |
+| GET    | `/api/folder/root`  | Root contents: `FolderContentsResponse` with `folder: null` and root folders |
+| GET    | `/api/folder/{id}`  | The folder, its child folders and its trackers (one call per Browse screen)  |
+| POST   | `/api/folder`       | Create (`name`, optional `parentFolderId`). 201, 404 bad parent, 409 duplicate name |
+| PUT    | `/api/folder/{id}`  | Rename (`name`). 409 on duplicate name                                      |
+| DELETE | `/api/folder/{id}`  | Delete the folder and everything inside it. 204                             |
+
+Names are trimmed and limited to 100 characters. Blank names return 400.
+
+`UserController` exists but has no endpoints yet.
 
 ### In progress
 
-Following the roadmap in order: 2 nested folders → 3 folder endpoints → 4 tracker endpoints → 5 events with drops → 6 metrics → 7 ingest + API keys → 8 recent trackers → 9 Google login.
+Following the roadmap in order: 4 tracker endpoints → 5 events with drops → 6 metrics → 7 ingest + API keys → 8 recent trackers → 9 Google login.
 
-- Nested folders: `Folder` and `002_create_folders.sql` have no `ParentFolderId` yet. This needs a new migration.
-- Repository queries aren't scoped to the user yet. Ownership checks come with each step's endpoints.
+- Tracker, Event and Drop repository queries aren't scoped to the user yet. Ownership checks come with each step's endpoints.
+- There's no endpoint to move a folder to a new parent. If one is added, it must reject moving a folder into itself or one of its descendants.
 - Google login is not implemented.
 
 ## Tech Stack
